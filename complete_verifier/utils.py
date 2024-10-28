@@ -127,7 +127,44 @@ class Logger:
             print(f'Result: {verified_status} '
                   f'in {self.status_per_sample_list[-1][1]:.4f} seconds')
 
-    def finish(self):
+    def write_in_files(self, filename, time_timeout, time_verified,
+                    time_unsafe, time_all_instances):
+        
+        assert filename is not None
+        with open(filename, 'a+') as file:
+            file.write('############# Summary #############\n')
+            acc = len(time_verified) / self.count * 100.
+            file.write(f'Final verified acc: {acc}% (total {self.count} examples)\n')
+            printed_str = f'Problem instances count:{len(time_verified) + len(time_unsafe) + len(time_timeout)} total verified (safe/unsat): {len(time_verified)}'
+            printed_str += f', total falsified (unsafe/sat): {len(time_unsafe)}'
+            printed_str += f', timeout:, {len(time_timeout)}'
+            file.write(f'{printed_str}\n')
+            file.write('mean time for ALL instances ' + f'(total {len(time_all_instances)}):' + f'{sum(time_all_instances)/(len(time_all_instances) + 1e-5)},'+f' max time: {max(time_all_instances)}\n')
+            if len(time_verified) > 0:
+                file.write('mean time for verified SAFE instances' + f'(total {len(time_verified)}): ' + f'{sum(time_verified) / len(time_verified)}, ' +f'max time: {max(time_verified)}\n')
+            if len(time_verified) > 0 and len(time_unsafe) > 0:
+                mean_time = (sum(time_verified) + sum(time_unsafe)) / (
+                    len(time_verified) + len(time_unsafe))
+                max_time = max(time_verified, time_unsafe)
+                file.write('mean time for verified (SAFE + UNSAFE) instances ' + f'(total {(len(time_verified) + len(time_unsafe))}):'
+                      f' {mean_time}, max time: {max_time}\n')
+            if len(time_verified) > 0 and len(time_timeout) > 0:
+                mean_time = (sum(time_verified) + sum(time_timeout)) / (
+                    len(time_verified) + len(time_timeout))
+                max_time = max(time_verified, time_timeout)
+                file.write('mean time for verified SAFE + TIMEOUT instances '
+                      f'(total {(len(time_verified) + len(time_timeout))}):'
+                      f' {mean_time}, max time: {max_time} \n')
+            if len(time_unsafe) > 0:
+                file.write(f'mean time for verified UNSAFE instances '
+                      f'(total {len(time_unsafe)}): '
+                      f'{sum(time_unsafe) / len(time_unsafe)}, '
+                      f'max time: {max(time_unsafe)}\n')
+
+            for k, v in self.verification_summary.items():
+                file.write(f'{k} (total {len(v)}), \nindex:'+ f'{v}\n')
+
+    def finish(self, filename=None):
         if self.run_mode != 'single_vnnlib':
             # Finished all examples.
             time_timeout = [
@@ -179,6 +216,11 @@ class Logger:
 
             for k, v in self.verification_summary.items():
                 print(f'{k} (total {len(v)}), index:', v)
+            
+            if filename is not None:
+                self.write_in_files(filename=filename, time_timeout=time_timeout,
+                                    time_verified=time_verified, time_unsafe=time_unsafe,
+                                    time_all_instances=time_all_instances)
 
             if arguments.Config['general']['save_output']:
                 # save output for test

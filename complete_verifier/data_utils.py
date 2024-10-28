@@ -250,8 +250,8 @@ def load_eran_dataset(spec):
         if eps_temp is None: eps_temp = 0.3
 
         eps_temp = torch.tensor(eps_temp / std).reshape(1, -1, 1, 1)
-        data_max = torch.tensor((1. - mean) / std).reshape(1, -1, 1, 1)
-        data_min = torch.tensor((0. - mean) / std).reshape(1, -1, 1, 1)
+        data_max = torch.tensor((1e9 - mean) / std).reshape(1, -1, 1, 1)
+        data_min = torch.tensor((-1e9 - mean) / std).reshape(1, -1, 1, 1)
 
         print("############################")
         print("Sampled data loaded. Data already preprocessed!")

@@ -24,6 +24,9 @@ import gc
 import torch
 import numpy as np
 from collections import defaultdict
+sys.path.append('../')
+print(sys.path)
+
 
 import arguments
 from auto_LiRPA import BoundedTensor
@@ -291,15 +294,20 @@ class ABCROWN:
                 return result
         else:
             assert not return_domains, 'return_domains is only for input split for now'
-            result = general_bab(
-                self.model, self.domain, x,
-                refined_lower_bounds=lower_bounds, refined_upper_bounds=upper_bounds,
-                activation_opt_params=activation_opt_params, reference_lA=reference_lA,
-                reference_alphas=reference_alphas, attack_images=attack_images,
-                timeout=timeout, max_iterations=max_iterations,
-                refined_betas=refined_betas, rhs=rhs,
-                model_incomplete=model_incomplete, time_stamp=time_stamp)
-
+            try:
+                result = general_bab(
+                    self.model, self.domain, x,
+                    refined_lower_bounds=lower_bounds, refined_upper_bounds=upper_bounds,
+                    activation_opt_params=activation_opt_params, reference_lA=reference_lA,
+                    reference_alphas=reference_alphas, attack_images=attack_images,
+                    timeout=timeout, max_iterations=max_iterations,
+                    refined_betas=refined_betas, rhs=rhs,
+                    model_incomplete=model_incomplete, time_stamp=time_stamp)
+            except:
+                min_lb = -torch.inf
+                nodes = None
+                ret = 'unknown'
+                return min_lb, nodes, ret
         min_lb = result[0]
         if min_lb is None:
             min_lb = -torch.inf
@@ -547,6 +555,8 @@ class ABCROWN:
             if select_instance and not vnnlib_id in select_instance:
                 continue
             self.logger.record_start_time()
+            if new_idx == 21:
+                exit()
 
             print(f'\n {"%"*35} idx: {new_idx}, vnnlib ID: {vnnlib_id} {"%"*35}')
             if arguments.Config['general']['save_output']:
@@ -697,7 +707,20 @@ class ABCROWN:
             # Summarize results.
             self.logger.summarize_results(verified_status, new_idx)
 
-        self.logger.finish()
+        net_name = arguments.Config["model"]["onnx_path"]
+        eps = arguments.Config["specification"]["epsilon"]
+        dataset = arguments.Config["data"]["dataset"]
+        end_prop = arguments.Config["data"]["end"]
+        cut_enabled = arguments.Config["bab"]["cut"]["enabled"]
+        if net_name is not None:
+            net_name = net_name.split('/')[-1]
+            filename = f"{net_name}_{eps}_{end_prop}_{cut_enabled}.dat"
+            filename = './rabbit_results/' + filename
+            print(f"filename {filename}")
+        else:
+            filename = None
+        
+        self.logger.finish(filename=filename)
         return self.logger.verification_summary
 
 

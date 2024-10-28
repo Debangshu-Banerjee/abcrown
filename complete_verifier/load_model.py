@@ -33,7 +33,7 @@ import importlib
 from functools import partial
 
 import arguments
-
+from network_converter import onnx2torch, get_pytorch_net, parse_onnx_layers
 from model_defs import *
 from utils import expand_path
 
@@ -302,9 +302,11 @@ def load_model(weights_loaded=True):
 
     elif arguments.Config["model"]["onnx_path"] is not None:
         # Load onnx model
-        model_ori, _ = load_model_onnx(expand_path(
-            arguments.Config["model"]["onnx_path"]))
-
+        # model_ori, _ = load_model_onnx(expand_path(
+        #     arguments.Config["model"]["onnx_path"]))
+        net_onnx = onnx.load(arguments.Config["model"]["onnx_path"])
+        onnx_layers = parse_onnx_layers(net_onnx)
+        model_ori = get_pytorch_net(model= onnx_layers, remove_last_layer=False, all_linear=False)
     else:
         print("Warning: pretrained model path is not given!")
 
